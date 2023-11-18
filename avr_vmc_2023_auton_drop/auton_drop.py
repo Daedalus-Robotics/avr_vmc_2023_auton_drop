@@ -1,8 +1,6 @@
 import rclpy
 from rclpy.node import Node
-# make custom srv type that includes:
-# bool enable
-# bool do_drop
+from rclpy.qos import QoSPresetProfiles
 from avr_pcc_2023_interfaces.srv import SetLedStrip
 from std_srvs.srv import Trigger, SetBool
 from apriltag_msgs.msg import AprilTagDetectionArray
@@ -39,7 +37,8 @@ class AutonDropNode(Node):
         self.apriltag_subscriber = self.create_subscription(
             AprilTagDetectionArray,
             '/detections',
-            self.apriltag_callback
+            self.apriltag_callback,
+            10
         )
 
         self.drop_timer = self.create_timer(
