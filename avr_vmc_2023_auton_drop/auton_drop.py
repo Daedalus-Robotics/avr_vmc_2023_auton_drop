@@ -88,3 +88,14 @@ class AutonDropNode(Node):
 
     def do_drop(self) -> None:
         self.drop_timer.cancel()
+
+
+def main() -> None:
+    rclpy.init()
+    node = AutonDropNode()
+    executor = rclpy.executors.MultiThreadedExecutor()
+    rclpy.spin(node, executor)
+
+
+if __name__ == '__main__':
+    main()
