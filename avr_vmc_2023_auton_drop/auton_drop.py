@@ -26,7 +26,7 @@ class AutonDropNode(Node):
 
         self.auton_trigger_client = ActionServer(
             self,
-            Trigger,
+            AutonDrop,
             'trigger',
             execute_callback=self.execute_callback,
             goal_callback=self.goal_callback,
