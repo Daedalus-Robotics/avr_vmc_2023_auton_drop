@@ -43,7 +43,7 @@ class AutonDropNode(Node):
 
         self.led_client = self.create_client(
             SetLedStrip,
-            '/led_strips/set'
+            '/led_strip/set'
         )
 
         self.apriltag_subscriber = self.create_subscription(
