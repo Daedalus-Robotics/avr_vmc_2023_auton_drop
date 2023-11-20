@@ -1,3 +1,4 @@
+from threading import Event
 from typing import List
 
 import time
@@ -5,7 +6,6 @@ import rclpy
 from rclpy.action.server import ServerGoalHandle
 from rclpy.node import Node
 from rclpy.action import ActionServer, CancelResponse, GoalResponse
-from rclpy.qos import QoSPresetProfiles
 from avr_pcc_2023_interfaces.srv import SetLedStrip
 from std_srvs.srv import Trigger
 from apriltag_msgs.msg import AprilTagDetectionArray, AprilTagDetection
@@ -16,13 +16,13 @@ class AutonDropNode(Node):
     def __init__(self) -> None:
         super().__init__('auton_drop', namespace='auton_drop')
 
-        # delay parameter
         self.declare_parameter('delay', 0.75)
         self.delay = float(self.get_parameter('delay').value)
 
         self.enabled = False
         self.should_drop = False
-        self.apriltag: List[AprilTagDetection] = []
+        self.apriltags: List[AprilTagDetection] = []
+        self.drop_event = Event()
 
         self.auton_trigger_client = ActionServer(
             self,
@@ -33,8 +33,6 @@ class AutonDropNode(Node):
             handle_accepted_callback=self.handle_accepted_callback,
             cancel_callback=self.cancel_callback
         )
-
-        # when you call it, it will start searching for a tag,
 
         self.trigger_client = self.create_client(
             Trigger,
@@ -65,11 +63,7 @@ class AutonDropNode(Node):
         self.get_logger().info('Waiting for set LED strip service')
         self.trigger_client.wait_for_service()
 
-    # send one empty feedback message when we find an apriltag,
-
-    # send result after we move servo
-
-    def goal_callback(self, goal_request: AutonDrop.Goal) -> GoalResponse:
+    def goal_callback(self, _: AutonDrop.Goal) -> GoalResponse:
         if not self.enabled:
             self.get_logger().info('Started auton drop')
         else:
@@ -103,7 +97,7 @@ class AutonDropNode(Node):
                 self.get_logger().info('Drop canceled')
                 break
 
-            if len(self.apriltag) >= 1:
+            if len(self.apriltags) >= 1:
                 goal_handle.publish_feedback(feedback_msg)
 
                 self.get_logger().info('Apriltag found, flashing LEDs')
@@ -118,23 +112,28 @@ class AutonDropNode(Node):
                 led_future = self.led_client.call_async(led_request)
 
                 if request_msg.should_drop:
-                    led_future.add_done_callback(lambda: self.drop_timer.reset())  # <- in this callback add the timer
+                    led_future.add_done_callback(lambda _: self.drop_timer.reset())
 
+                    self.drop_event.wait(5 + self.delay)
+                    self.drop_event.clear()
+
+                self.apriltags = []
                 break
 
         goal_handle.succeed()
         self.enabled = False
-        return AutonDrop.Result()
+        return result_msg
 
     def apriltag_callback(self, detections: AprilTagDetectionArray) -> None:
-        self.apriltag = detections.detections
+        self.apriltags = detections.detections
 
     def do_drop(self) -> None:
         self.drop_timer.cancel()
 
         self.get_logger().info('Triggering drop')
         trigger_request = Trigger.Request()
-        self.trigger_client.call_async(trigger_request)
+        future = self.trigger_client.call_async(trigger_request)
+        future.add_done_callback(lambda _: self.drop_event.set())
 
 
 def main() -> None:
