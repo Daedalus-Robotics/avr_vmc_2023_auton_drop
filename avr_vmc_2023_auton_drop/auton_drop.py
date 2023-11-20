@@ -97,7 +97,11 @@ class AutonDropNode(Node):
                 self.get_logger().info('Drop canceled')
                 break
 
-            if len(self.apriltags) >= 1:
+            detections = self.apriltags
+
+            if len(detections) >= 1:
+                feedback_msg.apriltag_id = detections[0].id
+
                 goal_handle.publish_feedback(feedback_msg)
 
                 self.get_logger().info('Apriltag found, flashing LEDs')
