@@ -87,14 +87,17 @@ class AutonDropNode(Node):
         request_msg: AutonDrop.Goal = goal_handle.request
         feedback_msg = AutonDrop.Feedback()
         result_msg = AutonDrop.Result()
+        success = True
 
         while True:
             time.sleep(1 / 12)
             if not goal_handle.is_active:
+                success = False
                 self.get_logger().info('Drop aborted')
                 break
 
             if goal_handle.is_cancel_requested:
+                success = False
                 goal_handle.canceled()
                 self.get_logger().info('Drop canceled')
                 break
@@ -126,7 +129,8 @@ class AutonDropNode(Node):
                 self.apriltags = []
                 break
 
-        goal_handle.succeed()
+        if success:
+            goal_handle.succeed()
         self.enabled = False
         return result_msg
 
