@@ -63,6 +63,8 @@ class AutonDropNode(Node):
         self.get_logger().info('Waiting for set LED strip service')
         self.trigger_client.wait_for_service()
 
+        self.get_logger().info('Started')
+
     def goal_callback(self, _: AutonDrop.Goal) -> GoalResponse:
         if not self.enabled:
             self.get_logger().info('Started auton drop')
