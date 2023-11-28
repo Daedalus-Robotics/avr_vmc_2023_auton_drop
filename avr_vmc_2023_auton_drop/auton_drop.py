@@ -155,7 +155,7 @@ class AutonDropNode(Node):
 
         self.get_logger().info('Triggering drop')
         trigger_request = Trigger.Request()
-        client = self.trigger_client if self.use_full_drop else self.full_trigger_client
+        client = self.full_trigger_client if self.use_full_drop else self.trigger_client
         future = client.call_async(trigger_request)
         future.add_done_callback(lambda _: self.drop_event.set())
 
