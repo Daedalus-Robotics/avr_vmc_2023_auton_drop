@@ -52,7 +52,7 @@ class AutonDropNode(Node):
 
         self.apriltag_subscriber = self.create_subscription(
             AprilTagDetectionArray,
-            '/detections',
+            '/apriltag/detections',
             self.apriltag_callback,
             10
         )
