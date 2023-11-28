@@ -17,6 +17,8 @@ class AutonDropNode(Node):
         super().__init__('auton_drop', namespace='auton_drop')
 
         self.declare_parameter('delay', 0.75)
+        self.declare_parameter('use_full_drop', False)
+
         self.delay = float(self.get_parameter('delay').value)
 
         self.enabled = False
@@ -38,6 +40,10 @@ class AutonDropNode(Node):
             Trigger,
             '/bdu/trigger'
         )
+        self.full_trigger_client = self.create_client(
+            Trigger,
+            '/bdu/full_trigger'
+        )
 
         self.led_client = self.create_client(
             SetLedStrip,
@@ -57,13 +63,20 @@ class AutonDropNode(Node):
         )
         self.drop_timer.cancel()
 
-        self.get_logger().info('Waiting for servo trigger service')
+        self.get_logger().info('Waiting for bdu trigger service')
         self.trigger_client.wait_for_service()
+
+        self.get_logger().info('Waiting for bdu full trigger service')
+        self.full_trigger_client.wait_for_service()
 
         self.get_logger().info('Waiting for set LED strip service')
         self.trigger_client.wait_for_service()
 
         self.get_logger().info('Started')
+
+    @property
+    def use_full_drop(self) -> bool:
+        return bool(self.get_parameter('use_full_drop').value)
 
     def goal_callback(self, _: AutonDrop.Goal) -> GoalResponse:
         if not self.enabled:
@@ -142,7 +155,8 @@ class AutonDropNode(Node):
 
         self.get_logger().info('Triggering drop')
         trigger_request = Trigger.Request()
-        future = self.trigger_client.call_async(trigger_request)
+        client = self.trigger_client if self.use_full_drop else self.full_trigger_client
+        future = client.call_async(trigger_request)
         future.add_done_callback(lambda _: self.drop_event.set())
 
 
