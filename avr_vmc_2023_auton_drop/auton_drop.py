@@ -84,7 +84,7 @@ class AutonDropNode(Node):
     def use_full_drop_callback(self, request: SetBool.Request, response: SetBool.Response) -> SetBool.Response:
         self.use_full_drop = request.data
 
-        response.success = True,
+        response.success = True
         response.message = 'Success'
         return response
 
