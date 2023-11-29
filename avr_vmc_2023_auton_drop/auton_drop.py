@@ -7,7 +7,7 @@ from rclpy.action.server import ServerGoalHandle
 from rclpy.node import Node
 from rclpy.action import ActionServer, CancelResponse, GoalResponse
 from avr_pcc_2023_interfaces.srv import SetLedStrip
-from std_srvs.srv import Trigger
+from std_srvs.srv import Trigger, SetBool
 from apriltag_msgs.msg import AprilTagDetectionArray, AprilTagDetection
 from avr_vmc_2023_auton_drop_interfaces.action import AutonDrop
 
@@ -17,7 +17,6 @@ class AutonDropNode(Node):
         super().__init__('auton_drop', namespace='auton_drop')
 
         self.declare_parameter('delay', 0.75)
-        self.declare_parameter('use_full_drop', False)
 
         self.delay = float(self.get_parameter('delay').value)
 
@@ -26,7 +25,7 @@ class AutonDropNode(Node):
         self.apriltags: List[AprilTagDetection] = []
         self.drop_event = Event()
 
-        self.auton_trigger_client = ActionServer(
+        self.auton_trigger_server = ActionServer(
             self,
             AutonDrop,
             'trigger',
@@ -34,6 +33,12 @@ class AutonDropNode(Node):
             goal_callback=self.goal_callback,
             handle_accepted_callback=self.handle_accepted_callback,
             cancel_callback=self.cancel_callback
+        )
+
+        self.create_service(
+            SetBool,
+            'use_full_drop',
+            self.use_full_drop_callback
         )
 
         self.trigger_client = self.create_client(
@@ -63,6 +68,8 @@ class AutonDropNode(Node):
         )
         self.drop_timer.cancel()
 
+        self.use_full_drop = False
+
         self.get_logger().info('Waiting for bdu trigger service')
         self.trigger_client.wait_for_service()
 
@@ -74,9 +81,12 @@ class AutonDropNode(Node):
 
         self.get_logger().info('Started')
 
-    @property
-    def use_full_drop(self) -> bool:
-        return bool(self.get_parameter('use_full_drop').value)
+    def use_full_drop_callback(self, request: SetBool.Request, response: SetBool.Response) -> SetBool.Response:
+        self.use_full_drop = request.data
+
+        response.success = True,
+        response.message = 'Success'
+        return response
 
     def goal_callback(self, _: AutonDrop.Goal) -> GoalResponse:
         if not self.enabled:
